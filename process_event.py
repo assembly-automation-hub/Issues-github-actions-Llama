@@ -27,7 +27,6 @@ if event_name == "push":
     commit_sha = os.environ.get("COMMIT_SHA")
     commit = repo.get_commit(commit_sha)
 
-    # Пропускаем merge-коммиты (у них 2+ родителя)
     if len(commit.parents) > 1:
         exit(0)
 
@@ -64,7 +63,6 @@ elif event_name == "pull_request":
 else:
     exit(0)
 
-# Проверяем дубли — если Issue с таким dedup_key уже есть, выходим
 for issue in repo.get_issues(state="open"):
     if dedup_key in (issue.body or ""):
         print(f"Issue for {dedup_key} already exists (#{issue.number}), skipping.")
