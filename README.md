@@ -87,7 +87,7 @@ The system operates autonomously in the background.
 
 Configure the following Repository Secrets via `Settings -> Secrets and variables -> Actions`:
 
-* `GEMINI_API_KEY`: Your generated Google AI Studio API key.
+* `GH_MODELS_TOKEN`: Your generated API key: https://github.com/settings/personal-access-tokens.
 * `ALLOWED_USER`: Your exact GitHub handle (e.g., `OstinUA`).
 
 ## License
