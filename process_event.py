@@ -17,41 +17,25 @@ auth = Auth.Token(gh_token)
 gh = Github(auth=auth)
 repo = gh.get_repo(repo_name)
 
-diff_text = ""
-event_context = ""
-author_login = ""
-trigger_labels = []
-
-if event_name == "push":
-    commit_sha = os.environ.get("COMMIT_SHA")
-    commit = repo.get_commit(commit_sha)
-    if not commit.author:
-        exit(0)
-    author_login = commit.author.login.strip().lower()
-    if author_login not in allowed_users:
-        exit(0)
-    event_context = f"Commit Message: {commit.commit.message}"
-    trigger_labels = [m.lower() for m in re.findall(r'\[(.*?)\]', commit.commit.message)]
-    for file in commit.files:
-        diff_text += f"File: {file.filename}\nPatch:\n{file.patch}\n\n"
-        if len(diff_text) > 10000:
-            diff_text += "\n[Diff truncated...]"
-            break
-elif event_name == "pull_request":
-    pr_number = int(os.environ.get("PR_NUMBER"))
-    pr = repo.get_pull(pr_number)
-    author_login = pr.user.login.strip().lower()
-    if author_login not in allowed_users:
-        exit(0)
-    event_context = f"PR Title: {pr.title}\nPR Body: {pr.body}"
-    trigger_labels = [label.name.lower() for label in pr.labels]
-    for file in pr.get_files():
-        diff_text += f"File: {file.filename}\nPatch:\n{file.patch}\n\n"
-        if len(diff_text) > 80000:
-            diff_text += "\n[Diff truncated...]"
-            break
-else:
+if event_name != "pull_request":
     exit(0)
+
+pr_number = int(os.environ.get("PR_NUMBER"))
+pr = repo.get_pull(pr_number)
+author_login = pr.user.login.strip().lower()
+
+if author_login not in allowed_users:
+    exit(0)
+
+event_context = f"PR Title: {pr.title}\nPR Body: {pr.body}"
+trigger_labels = [label.name.lower() for label in pr.labels]
+
+diff_text = ""
+for file in pr.get_files():
+    diff_text += f"File: {file.filename}\nPatch:\n{file.patch}\n\n"
+    if len(diff_text) > 80000:
+        diff_text += "\n[Diff truncated...]"
+        break
 
 base_instructions = """
 Return only a raw JSON object with no markdown formatting. The JSON must contain these exact keys:
@@ -96,10 +80,7 @@ raw_content = re.sub(r'^```json\s*|```$', '', raw_content, flags=re.MULTILINE).s
 
 result = json.loads(raw_content)
 
-if event_name == "push":
-    footer = f"\n\n---\n*Generated automatically from commit {os.environ.get('COMMIT_SHA')[:7]}*"
-else:
-    footer = f"\n\n---\n*Generated automatically from PR #{os.environ.get('PR_NUMBER')}*"
+footer = f"\n\n---\n*Generated automatically from PR #{pr_number}*"
 
 repo.create_issue(
     title=result['issue_title'],
